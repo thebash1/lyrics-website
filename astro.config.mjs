@@ -12,13 +12,9 @@ export default defineConfig({
   server: {
     port: process.env.PORT ? parseInt(process.env.PORT) : 4321,
     host: true,
-  }
+  },
   integrations: [
     // Tailwind CSS integration
     (await import('@astrojs/tailwind')).default(),
   ],
-
-  adapter: node({
-    mode: 'standalone',
-  }),
 });
