@@ -6,8 +6,8 @@ function chunkVerse(text, sectionIndex) {
   const lines = text.split('\n');
   const chunks = [];
 
-  for (let i = 0; i < lines.length; i += 2) {
-    chunks.push(lines.slice(i, i + 2).join('\n'));
+  for (let i = 0; i < lines.length; i += 4) {
+    chunks.push(lines.slice(i, i + 4).join('\n'));
   }
 
   return chunks.map((chunkText, idx) => {
@@ -86,6 +86,52 @@ export async function getLyricsData(slugParam) {
     });
   } catch (err) {
     return new Response(JSON.stringify({ error: 'Unexpected error while reading lyrics', details: err.message }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+}
+
+export async function findSongsByArtist(artistSlug, songQuery) {
+  try {
+    const dirPath = path.join(process.cwd(), 'public', 'ly', artistSlug);
+    
+    let files;
+    try {
+      files = await fs.readdir(dirPath);
+    } catch (err) {
+      if (err.code === 'ENOENT') {
+        return new Response(JSON.stringify({ error: `Artist not found: ${artistSlug}` }), {
+          status: 404,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+      throw err;
+    }
+
+    // Filter only .txt files
+    let songs = files
+      .filter(file => file.endsWith('.txt'))
+      .map(file => {
+        const slug = file.replace('.txt', '');
+        return {
+          slug,
+          name: slug.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
+        };
+      });
+
+    // If there is a query, filter by it
+    if (songQuery) {
+      const queryLower = songQuery.toLowerCase().replace(/ /g, '-');
+      songs = songs.filter(song => song.slug.includes(queryLower));
+    }
+
+    return new Response(JSON.stringify({ songs }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  } catch (err) {
+    return new Response(JSON.stringify({ error: 'Unexpected error while listing songs', details: err.message }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }
     });
